@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Things To Do</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a no-nonsense planning office — calm, direct, slightly stern about procrastination.
+   IDEA: a wall-mounted priority board: four ruled quadrants with task cards pinned in place.
+   PICTURE: the live urgent/important matrix itself, brick "Do now" field leading.
+   COLOUR and TYPE: stone ground, black ink, brick accent, white panels; Schibsted Grotesk.
+   LAYOUT: focus bar, then matrix, then nudges, today/hourly, weekly + monthly charts, finished work. */
+:root{color-scheme:light dark;
+--bg:light-dark(#e7e4df,#171513);--panel:light-dark(#fff,#221f1c);--ink:light-dark(#141210,#ece8e2);
+--mute:light-dark(#5f5a53,#a39c92);--line:light-dark(#cfcac2,#3a3530);--brick:light-dark(#c8371e,#e4573d);
+--brickink:#fff;--dark:light-dark(#141210,#0d0c0b);--darkink:#ece8e2;--soft:light-dark(#f3f1ed,#2a2622);--ok:light-dark(#2f6b3a,#7fc28a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Schibsted Grotesk",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3.5vw,48px) max(5vw,16px)}.wrap{max-width:1240px;margin:0 auto}
+h1,h2,h3{margin:0;line-height:1.08;text-wrap:balance;font-weight:800}
+h1{font-size:clamp(32px,5vw,48px)}h2{font-size:24px}h3{font-size:17px;font-weight:700}
+.muted{color:var(--mute)}small,.sm{font-size:13px}
+button,input,select,textarea{font:inherit;font-size:16px;color:inherit}
+button{min-height:44px;padding:0 16px;border-radius:10px;border:1.5px solid var(--ink);background:transparent;cursor:pointer;font-weight:700}
+button.pri{background:var(--brick);border-color:var(--brick);color:var(--brickink)}
+button.ghost{border-color:var(--line);font-weight:500}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.card:focus-visible{outline:3px solid var(--brick);outline-offset:2px}
+input,select,textarea{width:100%;min-height:44px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel)}
+input[aria-invalid=true]{border-color:var(--brick);border-width:2.5px}
+textarea{min-height:88px;resize:vertical}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 4px}
+.err{color:var(--brick);font-weight:700;font-size:14px;margin:8px 0 0}
+.err:empty{display:none}
+.top{display:flex;flex-wrap:wrap;gap:16px;align-items:end;justify-content:space-between}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.focus{margin-top:18px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;background:var(--dark);color:var(--darkink);border-radius:14px;padding:14px 18px}
+.focus b{font-size:clamp(26px,4vw,36px);font-variant-numeric:tabular-nums;white-space:nowrap}
+.focus button{border-color:var(--darkink);color:var(--darkink)}
+.matrix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.q{border-radius:16px;padding:16px;min-height:240px;display:flex;flex-direction:column;gap:10px}
+.q header{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.q header p{margin:2px 0 0;font-size:13px;opacity:.85}
+.q1{background:var(--brick);color:var(--brickink)}.q2{background:var(--dark);color:var(--darkink)}
+.q3{background:var(--panel);border:1.5px solid var(--line)}.q4{background:transparent;border:1.5px dashed var(--line)}
+.count{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums}
+.card{background:var(--panel);color:var(--ink);border-radius:12px;padding:12px 14px;cursor:pointer;border:1px solid var(--line);text-align:left;width:100%}
+.q3 .card{background:var(--soft)}
+.card .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.card h3{font-size:16px}
+.chip{font-size:12px;font-weight:800;padding:2px 8px;border-radius:99px;white-space:nowrap;border:1.5px solid currentColor}
+.chip.hpa{background:var(--brick);color:#fff;border-color:var(--brick)}
+.meter{height:8px;border-radius:9px;background:var(--line);overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--brick)}.meter i.done{background:var(--ok)}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--mute)}
+.meta span{white-space:nowrap}
+.empty{font-size:14px;opacity:.75;margin:auto 0}
+.nudges{display:grid;gap:8px;margin-top:14px}
+.nudge{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--panel);border-left:5px solid var(--brick);border-radius:10px;padding:10px 14px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.panel{background:var(--panel);border-radius:16px;padding:18px;border:1px solid var(--line)}
+.hours{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:3px;align-items:end;height:110px;margin-top:12px}
+.hours div{background:var(--brick);border-radius:3px 3px 0 0;min-height:2px}.hours div.now{outline:2px solid var(--ink);outline-offset:1px}
+.hlabels{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));font-size:11px;color:var(--mute);margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.stat b{display:block;font-size:clamp(24px,3.4vw,32px);font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:13px;color:var(--mute)}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end;height:170px;margin-top:12px}
+.week .col{display:flex;flex-direction:column;justify-content:end;align-items:center;height:100%;gap:4px}
+.week .bar{width:100%;max-width:46px;background:var(--brick);border-radius:6px 6px 0 0;min-height:2px}
+.week .lab{font-size:12px;color:var(--mute);text-align:center;line-height:1.2}
+.week .n{font-size:12px;font-weight:700;white-space:nowrap}
+.fig{position:relative;min-height:220px;margin-top:8px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--mute)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.donelist{display:grid;gap:10px;margin-top:12px}
+details.out{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+details.out summary{cursor:pointer;font-weight:700;min-height:28px}
+pre.doc{white-space:pre-wrap;font:15px/1.55 "Schibsted Grotesk",system-ui,sans-serif;background:var(--soft);padding:14px;border-radius:10px;margin:10px 0;overflow-x:auto}
+.sheet{position:fixed;inset:0;background:rgb(0 0 0/.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.sheet.open{display:flex}
+.sheet>div{background:var(--bg);width:min(720px,100%);max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:20px max(4vw,16px) 28px}
+@media(min-width:760px){.sheet{align-items:center}.sheet>div{border-radius:18px}}
+.sheethead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.f3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.steps{display:grid;gap:6px;margin-top:8px}
+.steps label{display:flex;gap:10px;align-items:center;font-weight:500;font-size:16px;margin:0;min-height:40px}
+.steps input{width:22px;min-height:22px;height:22px;accent-color:var(--brick)}
+.score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:12px;border-radius:10px;background:var(--panel)}
+.score b{font-size:28px}
+.chat{display:grid;gap:10px;margin:12px 0}
+.msg{padding:12px 14px;border-radius:12px;background:var(--panel);white-space:pre-wrap}
+.msg.me{background:var(--dark);color:var(--darkink);justify-self:end;max-width:90%}
+.checkin{display:none;margin-top:14px;background:var(--dark);color:var(--darkink);border-radius:14px;padding:14px 16px}
+.checkin.show{display:block}.checkin input{background:#2a2622;color:#ece8e2;border-color:#4a443d}
+.checkin .actions button{border-color:var(--darkink);color:var(--darkink)}
+.sample{font-size:13px;color:var(--mute);margin-top:8px}
+@media(max-width:600px){.matrix,.grid2{grid-template-columns:minmax(0,1fr)}.q{min-height:0}.f3{grid-template-columns:minmax(0,1fr)}
+.hours,.hlabels{grid-template-columns:repeat(18,minmax(0,1fr))}.hlabels span:nth-child(odd){visibility:hidden}}
+@media(prefers-reduced-motion:no-preference){.focus.on b{animation:pulse 2s ease-in-out infinite}@keyframes pulse{50%{opacity:.6}}}
+</style>
+</head>
+<body>
+<section class="band"><div class="wrap">
+  <div class="top">
+    <div><h1>Things To Do</h1><p class="muted" id="today" style="margin:6px 0 0"></p></div>
+    <div class="actions"><button class="pri" id="addBtn">Add task</button><button id="minderBtn">Call in Minder</button></div>
+  </div>
+  <div class="focus" id="focus"></div>
+  <div class="checkin" id="checkin">
+    <h3>Hourly check-in</h3>
+    <p class="sm" style="margin:4px 0 8px;opacity:.85">What did you finish this past hour? One line is enough.</p>
+    <input id="checkinText" placeholder="e.g. Wrote the GNSS test plan">
+    <div class="actions" style="margin-top:8px"><button id="checkinSave">Log it</button><button id="checkinSkip">Skip</button></div>
+  </div>
+  <div class="matrix" id="matrix"></div>
+  <p class="sample" id="sampleNote"></p>
+  <div class="nudges" id="nudges"></div>
+</div></section>
+
+<section class="band" style="padding-top:0"><div class="wrap grid2">
+  <div class="panel">
+    <h2 id="dayTitle">Today</h2>
+    <div class="stats" id="dayStats"></div>
+    <h3>Focus time by hour</h3>
+    <div class="hours" id="hours"></div><div class="hlabels" id="hlabels"></div>
+    <p id="dayFeedback" style="margin:14px 0 0"></p>
+  </div>
+  <div class="panel">
+    <h2 id="weekTitle">This week</h2>
+    <div class="legend" style="margin-top:8px"><span><i style="background:var(--brick)"></i>Focus hours</span><span>Number on top: tasks finished</span></div>
+    <div class="week" id="week"></div>
+    <p id="weekFeedback" style="margin:14px 0 0"></p>
+  </div>
+</div></section>
+
+<section class="band" style="padding-top:0"><div class="wrap">
+  <div class="panel">
+    <h2 id="monthTitle">Last 30 days</h2>
+    <div class="legend" style="margin-top:8px"><span><i style="background:var(--brick)"></i>Focus hours per day</span><span><i style="background:var(--ink);border-radius:9px"></i>Day a task was finished</span></div>
+    <div class="fig" id="monthFig"><svg id="monthSvg" role="img" aria-label="Focus hours over the last 30 days"></svg></div>
+    <div class="stats" id="monthStats"></div>
+  </div>
+</div></section>
+
+<section class="band" style="padding-top:0"><div class="wrap">
+  <h2>Finished work</h2>
+  <p class="muted" style="margin:6px 0 0">Every finished task gets a proof of concept, a pitch deck outline and its next step requirements.</p>
+  <div class="donelist" id="donelist"></div>
+</div></section>
+
+<div class="sheet" id="taskSheet" role="dialog" aria-modal="true" aria-labelledby="taskHead"><div id="taskBody"></div></div>
+<div class="sheet" id="minderSheet" role="dialog" aria-modal="true" aria-labelledby="minderHead"><div>
+  <div class="sheethead"><h2 id="minderHead">Minder</h2><button class="ghost" data-close="minderSheet">Close</button></div>
+  <p class="muted sm" style="margin:0">Minder reads your whole board and tells you what to do next. No sugar-coating.</p>
+  <div class="actions" style="margin-top:10px" id="minderQuick">
+    <button class="ghost" data-q="plan">Plan my next 3 hours</button>
+    <button class="ghost" data-q="stuck">I'm procrastinating</button>
+    <button class="ghost" data-q="report">Progress report</button>
+    <button class="ghost" data-q="suggest">Suggest new tasks</button>
+  </div>
+  <div class="chat" id="chat"></div>
+  <form id="minderForm" class="actions"><input id="minderIn" placeholder="Ask Minder anything about your work" style="flex:1 1 220px"><button class="pri">Send</button></form>
+  <p class="sm muted" id="minderNote"></p>
+</div></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const H=3600e3,D=86400e3,now=()=>Date.now();
+const fmtH=ms=>{const m=Math.round(ms/60000);return m<60?m+'m':(m/60).toFixed(m<600?1:0)+'h'};
+const fmtDate=t=>new Date(t).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+/* ---- dates: every deadline is stored as local wall-clock time "YYYY-MM-DDTHH:MM" ---- */
+const pad=n=>String(n).padStart(2,'0');
+const MIN_YEAR=2000,MAX_YEAR=2100;
+// ms timestamp -> "YYYY-MM-DDTHH:MM" in the user's own time zone (toISOString() would give UTC and shift the deadline)
+const toLocalInput=t=>{const d=new Date(t);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())};
+// Strict parse of "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM[:SS]" as local time. Returns ms, or 0 if invalid.
+// Rejects impossible dates such as 2026-02-30 instead of letting them roll over into March.
+function parseDeadline(s){if(!s)return 0;const m=/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?$/.exec(String(s).trim());if(!m)return 0;
+const y=+m[1],mo=+m[2],d=+m[3],h=m[4]===undefined?23:+m[4],mi=m[5]===undefined?59:+m[5];
+if(mo<1||mo>12||d<1||d>31||h>23||mi>59)return 0;const dt=new Date(y,mo-1,d,h,mi);
+if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return 0;return dt.getTime()}
+const splitDeadline=s=>{const ms=parseDeadline(s);if(!ms)return{d:'',tm:''};const v=toLocalInput(ms);return{d:v.slice(0,10),tm:v.slice(11,16)}};
+
+function seed(){const t=now();const mk=(title,spec,dl,v,vi,o,est,steps,logged)=>({id:uid(),title,spec,deadline:dl?toLocalInput(t+dl):'',flagUrgent:false,value:v,viability:vi,outcome:o,est,steps:steps.map(s=>({t:s,d:false})),sessions:logged?[{s:t-logged-2*H,e:t-2*H}]:[],created:t-3*D,last:t-(logged?2*H:2*D),done:false,doneAt:0,outputs:'',sample:true});
+return{v:2,updated:0,running:null,checkins:[],lastCheck:t,tasks:[
+mk('Skylark2040: MeshNet field test','Run an off-grid message test between two devices and record range and delivery rate.',20*H,5,4,5,6,['Charge and flash both devices','Pick test route','Run test and log results','Write up findings'],90*60e3),
+mk('GSOR: first public data page','Publish one readable AMOC indicator page for citizen scientists.',5*D,5,3,5,10,['Choose dataset','Draft page copy','Build chart','Review with a scientist'],0),
+mk('Bare Camera: store listing','Screenshots, description and privacy note for the store listing.',30*H,3,5,3,3,['Take screenshots','Write description','Submit'],40*60e3),
+mk('Drift: decide sell or keep','List buyer options and a minimum price, then decide.',9*D,4,4,3,2,['List options','Set minimum price','Decide'],0),
+mk('Tidy downloads folder','Low value housekeeping.',0,1,5,1,1,['Sort','Delete'],0)]}}
+
+// Repair data saved by earlier versions: bad or UTC-shifted deadlines, out-of-range scores, missing arrays.
+function clean(st){if(!st||!Array.isArray(st.tasks))return null;
+const num=(v,lo,hi,def)=>{v=+v;return isFinite(v)?Math.min(hi,Math.max(lo,v)):def};
+st.tasks=st.tasks.filter(t=>t&&typeof t==='object');
+st.tasks.forEach(t=>{
+ if(t.deadline){let ms=parseDeadline(t.deadline);if(!ms){const d=new Date(t.deadline);ms=isNaN(d)?0:d.getTime()}
+  const y=ms?new Date(ms).getFullYear():0;t.deadline=ms&&y>=MIN_YEAR&&y<=MAX_YEAR?toLocalInput(ms):''}else t.deadline='';
+ ['value','viability','outcome'].forEach(k=>t[k]=Math.round(num(t[k],1,5,3)));
+ t.est=num(t.est,.25,1000,1);t.title=String(t.title||'Untitled task');t.spec=String(t.spec||'');
+ if(!Array.isArray(t.steps))t.steps=[];if(!Array.isArray(t.sessions))t.sessions=[];
+ t.sessions=t.sessions.filter(s=>s&&isFinite(s.s)&&isFinite(s.e)&&s.e>=s.s);
+ t.created=num(t.created,0,9e15,now());t.last=num(t.last,0,9e15,now());t.doneAt=num(t.doneAt,0,9e15,0);t.done=!!t.done;t.flagUrgent=!!t.flagUrgent});
+if(!Array.isArray(st.checkins))st.checkins=[];if(st.running&&!st.tasks.some(t=>t.id===st.running.id))st.running=null;st.v=2;return st}
+
+let S=null;try{S=clean(JSON.parse(localStorage.getItem('ttd-state')||'null'))}catch(e){}
+if(!S)S=seed();
+let dbDoc=null,saveT=0;
+function save(){S.updated=now();try{localStorage.setItem('ttd-state',JSON.stringify(S))}catch(e){}
+clearTimeout(saveT);saveT=setTimeout(()=>{if(dbDoc)dbDoc.set(JSON.parse(JSON.stringify(S))).catch(()=>{})},900)}
+
+const logged=t=>t.sessions.reduce((a,s)=>a+((s.e||now())-s.s),0)+(S.running&&S.running.id===t.id?now()-S.running.start:0);
+const score=t=>t.value*t.viability*t.outcome;
+const isHPA=t=>score(t)>=36;
+const due=t=>parseDeadline(t.deadline);
+const isUrgent=t=>t.flagUrgent||(due(t)&&due(t)-now()<48*H);
+const quad=t=>isHPA(t)?(isUrgent(t)?1:2):(isUrgent(t)?3:4);
+const stepPct=t=>t.steps.length?t.steps.filter(s=>s.d).length/t.steps.length:0;
+function eta(t){const l=logged(t),p=stepPct(t);const proj=p>0.05?Math.max(l/p,t.est*H*0.5):t.est*H;const left=Math.max(proj-l,0);return{l,left,pct:Math.min(100,Math.round(Math.max(p,l/(t.est*H||1))*100))}}
+const dueTxt=t=>{if(!due(t))return'No deadline';const d=due(t)-now();if(d<0)return'Overdue '+fmtH(-d);return d<48*H?'Due in '+fmtH(d):'Due '+fmtDate(due(t))};
+
+const Q=[[1,'Do now','Urgent and high payoff'],[2,'Schedule','High payoff, not urgent yet'],[3,'Batch or hand off','Urgent, low payoff'],[4,'Drop or park','Low payoff, not urgent']];
+function card(t){const e=eta(t);return`<button class="card" data-open="${t.id}"><div class="row"><h3>${esc(t.title)}</h3><span class="chip ${isHPA(t)?'hpa':''}">${isHPA(t)?'HPA':'LPA'} ${score(t)}</span></div>
+<div class="meter" aria-label="${e.pct}% complete"><i style="width:${e.pct}%"></i></div>
+<div class="meta"><span>${e.pct}% done</span><span>${fmtH(e.left)} to completion</span><span>${dueTxt(t)}</span>${S.running&&S.running.id===t.id?'<span style="color:var(--brick);font-weight:700">Timing</span>':''}</div></button>`}
+
+function renderMatrix(){const open=S.tasks.filter(t=>!t.done);
+$('matrix').innerHTML=Q.map(([n,name,sub])=>{const ts=open.filter(t=>quad(t)===n).sort((a,b)=>(due(a)||9e15)-(due(b)||9e15)||score(b)-score(a));
+return`<section class="q q${n}"><header><div><h2>${name}</h2><p>${sub}</p></div><span class="count">${ts.length}</span></header>${ts.map(card).join('')||`<p class="empty">${n===1?'Nothing on fire. Pull one from Schedule.':'Empty.'}</p>`}</section>`}).join('');
+$('sampleNote').textContent=S.tasks.some(t=>t.sample)?'Sample tasks drawn from your project names, with made-up figures — edit or delete them.':''}
+
+function renderFocus(){const r=S.running,t=r&&S.tasks.find(x=>x.id===r.id),f=$('focus');
+if(t){const e=eta(t);f.className='focus on';f.innerHTML=`<div style="flex:1 1 220px"><span class="sm" style="opacity:.8">Focusing on</span><h3>${esc(t.title)}</h3><span class="sm" style="opacity:.8">${e.pct}% done · ${fmtH(e.left)} to completion</span></div><b id="clock">${clock(now()-r.start)}</b><button id="stopBtn">Stop</button>`}
+else{const next=S.tasks.filter(x=>!x.done).sort((a,b)=>quad(a)-quad(b)||(due(a)||9e15)-(due(b)||9e15))[0];
+f.className='focus';f.innerHTML=next?`<div style="flex:1 1 220px"><span class="sm" style="opacity:.8">Nothing running. Your next move</span><h3>${esc(next.title)}</h3></div><button data-start="${next.id}">Start 25 minutes</button>`:`<div><h3>Board clear.</h3><span class="sm" style="opacity:.8">Add a task or ask Minder for suggestions.</span></div>`}}
+const clock=ms=>{const s=Math.floor(ms/1000);return[Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(n=>String(n).padStart(2,'0')).join(':')};
+
+function start(id){stop(true);S.running={id,start:now()};const t=S.tasks.find(x=>x.id===id);if(t)t.last=now();save();renderAll()}
+function stop(silent){const r=S.running;if(!r)return;const t=S.tasks.find(x=>x.id===r.id);if(t&&now()-r.start>30e3){t.sessions.push({s:r.start,e:now()});t.last=now()}S.running=null;if(!silent){save();renderAll()}}
+
+function renderNudges(){const n=[],open=S.tasks.filter(t=>!t.done);
+open.filter(t=>isHPA(t)&&now()-t.last>24*H).slice(0,2).forEach(t=>n.push([`<b>${esc(t.title)}</b> is high payoff and untouched for ${fmtH(now()-t.last)}. Start with 10 minutes.`,t.id]));
+open.filter(t=>due(t)&&due(t)<now()).slice(0,2).forEach(t=>n.push([`<b>${esc(t.title)}</b> is overdue. Finish it, move the deadline, or drop it.`,t.id]));
+const q1=open.filter(t=>quad(t)===1).length;if(q1>4)n.push([`${q1} tasks in Do now. That is too many to be true — move some to Schedule.`,null]);
+const lpaTime=sumToday(t=>!isHPA(t)),hpaTime=sumToday(t=>isHPA(t));if(lpaTime>H&&lpaTime>hpaTime)n.push([`Today you've spent more time on low payoff work (${fmtH(lpaTime)}) than high payoff (${fmtH(hpaTime)}).`,null]);
+$('nudges').innerHTML=n.map(([m,id])=>`<div class="nudge"><span style="flex:1 1 240px">${m}</span>${id?`<button class="ghost" data-start="${id}">Start now</button>`:''}</div>`).join('')}
+
+function sessionsAll(){const a=[];S.tasks.forEach(t=>{t.sessions.forEach(s=>a.push({t,s:s.s,e:s.e}));if(S.running&&S.running.id===t.id)a.push({t,s:S.running.start,e:now()})});return a}
+function sumRange(a,b,f=()=>true){return sessionsAll().reduce((x,o)=>f(o.t)?x+Math.max(0,Math.min(o.e,b)-Math.max(o.s,a)):x,0)}
+const sod=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
+// Calendar-day start i days after t. Adding 24h breaks on daylight-saving changes, so step by calendar date instead.
+const addDays=(t,i)=>{const d=new Date(t);d.setDate(d.getDate()+i);d.setHours(0,0,0,0);return d.getTime()};
+const sumToday=f=>sumRange(sod(now()),addDays(now(),1),f);
+
+function renderDay(){const s0=sod(now()),total=sumToday(),hpa=sumToday(isHPA),fin=S.tasks.filter(t=>t.done&&t.doneAt>=s0).length;
+$('dayTitle').textContent='Today, '+fmtDate(now());
+$('dayStats').innerHTML=`<div class="stat"><b>${fmtH(total)}</b><span>focus time</span></div><div class="stat"><b>${total?Math.round(hpa/total*100):0}%</b><span>on high payoff</span></div><div class="stat"><b>${fin}</b><span>finished</span></div>`;
+const hrs=[];for(let h=6;h<24;h++){const a=new Date(s0);a.setHours(h);const b=new Date(s0);b.setHours(h+1);hrs.push(sumRange(a.getTime(),b.getTime()))}const mx=Math.max(H/2,...hrs),cur=new Date().getHours();
+$('hours').innerHTML=hrs.map((v,i)=>`<div title="${i+6}:00 · ${fmtH(v)}" style="height:${Math.max(2,v/mx*100)}%" class="${i+6===cur?'now':''}"></div>`).join('');
+$('hlabels').innerHTML=hrs.map((_,i)=>`<span>${i+6}</span>`).join('');
+const ck=S.checkins.filter(c=>c.at>=s0);
+let fb=total<15*60e3?'No real focus yet today. Open the top task and give it 25 minutes.':hpa/total>=.6?`Good day so far: most of your time went to work that matters.`:`Busy, but most of it was low payoff. Point the next hour at a Do now task.`;
+if(ck.length)fb+=` Check-ins: ${ck.map(c=>esc(c.text)).join('; ')}.`;
+$('dayFeedback').innerHTML=fb}
+
+function renderWeek(){const base=now(),days=[];for(let i=0;i<7;i++){const a=addDays(base,i-6),b=addDays(base,i-5);days.push({a,h:sumRange(a,b),f:S.tasks.filter(t=>t.done&&t.doneAt>=a&&t.doneAt<b).length})}
+const mx=Math.max(H,...days.map(d=>d.h)),tot=days.reduce((x,d)=>x+d.h,0),fin=days.reduce((x,d)=>x+d.f,0);
+$('weekTitle').textContent=`This week: ${fmtH(tot)} focused, ${fin} finished`;
+$('week').innerHTML=days.map(d=>`<div class="col"><span class="n">${d.f||''}</span><div class="bar" style="height:${Math.max(1,d.h/mx*80)}%" title="${fmtH(d.h)}"></div><span class="lab">${new Date(d.a).toLocaleDateString(undefined,{weekday:'short'})}<br>${fmtH(d.h)}</span></div>`).join('');
+const best=days.reduce((a,b)=>b.h>a.h?b:a);
+$('weekFeedback').textContent=tot<H?'A quiet week. Set one Do now task and protect an hour for it tomorrow.':`Best day: ${new Date(best.a).toLocaleDateString(undefined,{weekday:'long'})} with ${fmtH(best.h)}. Average ${fmtH(tot/7)} a day.`}
+
+let monthData=[];
+function renderMonth(){const base=now(),s0=addDays(base,-29);monthData=[];for(let i=0;i<30;i++){const a=addDays(base,i-29),b=addDays(base,i-28);monthData.push({a,h:sumRange(a,b)/H,f:S.tasks.filter(t=>t.done&&t.doneAt>=a&&t.doneAt<b).length})}
+const tot=monthData.reduce((x,d)=>x+d.h,0),fin=monthData.reduce((x,d)=>x+d.f,0),active=monthData.filter(d=>d.h>.25).length;
+const hpaDone=S.tasks.filter(t=>t.done&&t.doneAt>=s0&&isHPA(t)).length;
+$('monthTitle').textContent=`Last 30 days: ${fin} task${fin===1?'':'s'} finished`;
+$('monthStats').innerHTML=`<div class="stat"><b>${tot.toFixed(1)}h</b><span>focus time</span></div><div class="stat"><b>${active}/30</b><span>days with real focus</span></div><div class="stat"><b>${hpaDone}</b><span>high payoff finished</span></div>`;drawMonth()}
+const svg=$('monthSvg');
+function drawMonth(){const W=svg.clientWidth,Hh=svg.clientHeight;if(!W)return;const p={l:34,r:10,t:12,b:26},mx=Math.max(1,Math.ceil(Math.max(...monthData.map(d=>d.h)))),bw=(W-p.l-p.r)/30;
+const y=v=>p.t+(Hh-p.t-p.b)*(1-v/mx);let g='';
+[0,mx/2,mx].forEach(v=>{g+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${p.l-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--mute)">${+v.toFixed(1)}h</text>`});
+monthData.forEach((d,i)=>{const x=p.l+i*bw;g+=`<rect x="${x+bw*.15}" y="${y(d.h)}" width="${bw*.7}" height="${Math.max(0,y(0)-y(d.h))}" rx="2" fill="var(--brick)"><title>${fmtDate(d.a)}: ${d.h.toFixed(1)}h, ${d.f} finished</title></rect>`;
+if(d.f)g+=`<circle cx="${x+bw/2}" cy="${y(d.h)-8}" r="4" fill="var(--ink)"/>`;
+if(i%(W<520?10:5)===0||i===29)g+=`<text x="${x+bw/2}" y="${Hh-8}" text-anchor="middle" font-size="11" fill="var(--mute)">${new Date(d.a).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</text>`});
+svg.innerHTML=g}
+const monthRO=new ResizeObserver(drawMonth);monthRO.observe(svg);
+
+function renderDone(){const d=S.tasks.filter(t=>t.done).sort((a,b)=>b.doneAt-a.doneAt);
+$('donelist').innerHTML=d.length?d.map(t=>`<details class="out"><summary>${esc(t.title)} <span class="muted sm">· ${fmtDate(t.doneAt)} · ${fmtH(logged(t))} · ${isHPA(t)?'HPA':'LPA'}</span></summary>
+${t.outputs?`<pre class="doc" id="out-${t.id}">${esc(t.outputs)}</pre>`:'<p class="muted">Write-up not generated yet.</p>'}
+<div class="actions"><button class="ghost" data-copy="${t.id}">Copy</button><button class="ghost" data-gen="${t.id}">${t.outputs?'Regenerate':'Generate'} with Minder</button><button class="ghost" data-reopen="${t.id}">Reopen</button></div></details>`).join(''):'<p class="muted">Nothing finished yet. When you mark a task done, its proof of concept, pitch deck outline and next step requirements appear here.</p>'}
+
+function renderAll(){renderFocus();renderMatrix();renderNudges();renderDay();renderWeek();renderMonth();renderDone();
+$('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+
+/* task sheet */
+let editId=null;
+// Validate the task form. Returns {errs:[[fieldId,message]], ...clean values}.
+function readForm(origDeadline){const errs=[];const title=$('f-title').value.trim();if(!title)errs.push(['f-title','Give the task a name.']);
+const di=$('f-date'),ti=$('f-time');const ds=di.value.trim().replace(/[./]/g,'-'),ts=ti.value.trim();let deadline='',ms=0;
+if(di.validity&&di.validity.badInput)errs.push(['f-date','The deadline date is incomplete. Finish it or clear it.']);
+else if(ti.validity&&ti.validity.badInput)errs.push(['f-time','The time is incomplete. Finish it (HH:MM) or clear it.']);
+else if(ds){if(ts&&!/^\d{1,2}:\d{2}$/.test(ts))errs.push(['f-time','Write the time as HH:MM, 24-hour, e.g. 17:30.']);
+ else{ms=parseDeadline(ds+(ts?'T'+ts:''));const y=parseInt(ds,10);
+  if(!ms)errs.push(['f-date','That date does not exist. Use the picker, or type it as YYYY-MM-DD.']);
+  else if(y<MIN_YEAR||y>MAX_YEAR)errs.push(['f-date',`Check the year: ${y} looks like a typo.`]);
+  else deadline=toLocalInput(ms)}}
+else if(ts)errs.push(['f-date','You set a time but no date. Add a date or clear the time.']);
+const ei=$('f-est');const estRaw=String(ei.value).trim().replace(',','.');const est=+estRaw;
+if((ei.validity&&ei.validity.badInput)||!estRaw||!isFinite(est)||est<=0)errs.push(['f-est','Estimated hours must be a number above 0, e.g. 1.5.']);
+else if(est>1000)errs.push(['f-est','Over 1000 hours. Split this into smaller tasks.']);
+const pastNew=!errs.length&&deadline&&ms<now()&&deadline!==origDeadline;
+return{errs,title,deadline,pastNew,est:Math.max(.25,est)}}
+
+function openTask(id){editId=id;const t=id?S.tasks.find(x=>x.id===id):{title:'',spec:'',deadline:'',flagUrgent:false,value:3,viability:3,outcome:3,est:2,steps:[]};
+if(!t)return;
+const sel=(k,lab)=>`<div><label for="f-${k}">${lab}</label><select id="f-${k}">${[1,2,3,4,5].map(n=>`<option ${t[k]==n?'selected':''}>${n}</option>`).join('')}</select></div>`;
+const e=id?eta(t):null,dl=splitDeadline(t.deadline);
+$('taskBody').innerHTML=`<div class="sheethead"><h2 id="taskHead">${id?'Task':'New task'}</h2><button class="ghost" data-close="taskSheet">Close</button></div>
+<form id="taskForm" novalidate><label for="f-title">Task</label><input id="f-title" required value="${esc(t.title)}" placeholder="What has to get done">
+<label for="f-spec">Project spec and definition of done</label><textarea id="f-spec" placeholder="What does finished look like?">${esc(t.spec)}</textarea>
+<div class="f3">${sel('value','Value (1–5)')}${sel('viability','Viability (1–5)')}${sel('outcome','Potential outcome (1–5)')}</div>
+<div class="score" id="scoreBox"></div>
+<div class="f3"><div><label for="f-date">Deadline date</label><input type="date" id="f-date" min="${MIN_YEAR}-01-01" max="${MAX_YEAR}-12-31" placeholder="YYYY-MM-DD" value="${esc(dl.d)}"></div>
+<div><label for="f-time">Time (optional)</label><input type="time" id="f-time" placeholder="HH:MM" value="${esc(dl.tm)}"></div>
+<div><label for="f-urg">Urgency</label><select id="f-urg"><option value="0">From deadline</option><option value="1" ${t.flagUrgent?'selected':''}>Mark urgent</option></select></div></div>
+<p class="sm muted" style="margin:4px 0 0">Leave the time empty to mean the end of that day (23:59 your local time). Clear the date for no deadline.</p>
+<label for="f-est">Estimated hours</label><input type="number" id="f-est" min="0.25" max="1000" step="0.25" inputmode="decimal" value="${esc(t.est)}" style="max-width:200px">
+<label for="f-steps">Steps, one per line</label><textarea id="f-steps" placeholder="Break it into small steps">${esc(t.steps.map(s=>s.t).join('\n'))}</textarea>
+${id&&t.steps.length?`<h3 style="margin-top:14px">Tick off steps</h3><div class="steps">${t.steps.map((s,i)=>`<label><input type="checkbox" data-step="${i}" ${s.d?'checked':''}>${esc(s.t)}</label>`).join('')}</div>`:''}
+${e?`<div class="meter" style="height:12px;margin-top:16px"><i style="width:${e.pct}%"></i></div><p class="sm muted" style="margin:0">${e.pct}% done · ${fmtH(e.l)} logged · about ${fmtH(e.left)} to completion</p>`:''}
+<p class="err" id="formErr" role="alert" aria-live="assertive"></p>
+<div class="actions" style="margin-top:16px"><button class="pri">${id?'Save':'Add task'}</button>
+${id?`<button type="button" data-start="${id}">Start timer</button><button type="button" id="doneBtn">Mark done</button><button type="button" class="ghost" id="delBtn">Delete</button>`:''}</div></form>`;
+const upd=()=>{const v=+$('f-value').value*+$('f-viability').value*+$('f-outcome').value;$('scoreBox').innerHTML=`<b>${v}</b><span class="chip ${v>=36?'hpa':''}">${v>=36?'High payoff activity':'Low payoff activity'}</span><span class="sm muted">Value × viability × outcome, out of 125. 36 or more counts as high payoff.</span>`};
+['value','viability','outcome'].forEach(k=>$('f-'+k).addEventListener('change',upd));upd();
+const form=$('taskForm'),fields=['f-title','f-date','f-time','f-est'];
+const clearErr=()=>{$('formErr').textContent='';fields.forEach(f=>$(f).removeAttribute('aria-invalid'))};
+fields.forEach(f=>$(f).addEventListener('input',()=>{clearErr();delete form.dataset.pastOk}));
+form.addEventListener('submit',ev=>{ev.preventDefault();clearErr();const r=readForm(id?t.deadline:'');
+if(r.errs.length){r.errs.forEach(([f])=>$(f).setAttribute('aria-invalid','true'));$('formErr').textContent=r.errs.map(x=>x[1]).join(' ');$(r.errs[0][0]).focus();return}
+if(r.pastNew&&form.dataset.pastOk!==r.deadline){form.dataset.pastOk=r.deadline;$('f-date').setAttribute('aria-invalid','true');$('formErr').textContent=`That deadline (${new Date(parseDeadline(r.deadline)).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})}) is already in the past. Fix the date, or press ${id?'Save':'Add task'} again to keep it.`;return}
+const lines=$('f-steps').value.split('\n').map(s=>s.trim()).filter(Boolean);
+const o=id?t:{id:uid(),sessions:[],created:now(),done:false,doneAt:0,outputs:''};
+const old=o.steps||[];Object.assign(o,{title:r.title,spec:$('f-spec').value.trim(),deadline:r.deadline,est:r.est,flagUrgent:$('f-urg').value==='1',value:+$('f-value').value,viability:+$('f-viability').value,outcome:+$('f-outcome').value,steps:lines.map(l=>({t:l,d:!!(old.find(s=>s.t===l)||{}).d})),last:now(),sample:false});
+if(!id)S.tasks.push(o);save();close('taskSheet');renderAll()});
+$('taskBody').querySelectorAll('[data-step]').forEach(c=>c.addEventListener('change',()=>{t.steps[+c.dataset.step].d=c.checked;t.last=now();save();renderAll()}));
+if(id){$('doneBtn').onclick=()=>finish(t);$('delBtn').onclick=()=>{if($('delBtn').dataset.sure){S.tasks=S.tasks.filter(x=>x.id!==id);if(S.running&&S.running.id===id)S.running=null;save();close('taskSheet');renderAll()}else{$('delBtn').dataset.sure=1;$('delBtn').textContent='Tap again to delete'}}}
+$('taskSheet').classList.add('open');$('f-title').focus()}
+function close(id){$(id).classList.remove('open')}
+
+function finish(t){if(S.running&&S.running.id===t.id)stop(true);t.done=true;t.doneAt=now();t.steps.forEach(s=>s.d=true);t.outputs=localOutputs(t);save();close('taskSheet');renderAll();genOutputs(t)}
+function localOutputs(t){return`PROOF OF CONCEPT
+Task: ${t.title}
+Definition of done: ${t.spec||'Not written'}
+Evidence: ${t.steps.length} steps completed, ${fmtH(logged(t))} focused work, finished ${fmtDate(t.doneAt)}.
+Payoff score: ${score(t)}/125 (value ${t.value}, viability ${t.viability}, outcome ${t.outcome}).
+
+PITCH DECK OUTLINE
+1. The problem this task solves
+2. What was built or decided: ${t.title}
+3. Proof: ${t.steps.map(s=>s.t).join('; ')||'see notes'}
+4. Who it serves, worldwide
+5. Value and potential outcome
+6. The ask and next milestone
+
+NEXT STEP REQUIREMENTS
+- Define the follow-on task and its definition of done
+- Name what you need: people, money, tools or data
+- Set a deadline and add it to the board`}
+
+/* Minder */
+let sample=null;
+function boardText(){return S.tasks.map(t=>{const e=eta(t);return`- ${t.title} | ${t.done?'DONE '+fmtDate(t.doneAt):'Quadrant '+Q[quad(t)-1][1]} | ${isHPA(t)?'HPA':'LPA'} score ${score(t)} | ${e.pct}% | logged ${fmtH(e.l)} of est ${t.est}h | ${dueTxt(t)}${due(t)?' (deadline '+t.deadline+' local)':''} | last touched ${fmtH(now()-t.last)} ago | spec: ${t.spec} | steps: ${t.steps.map(s=>(s.d?'[x] ':'[ ] ')+s.t).join(', ')}`}).join('\n')}
+const SYS=`You are Minder, a blunt, warm productivity coach inside a to-do app. Your job: stop procrastination, separate urgent from important, and push high payoff activities (HPA) over low payoff ones (LPA). Be concrete, short, and use plain text with short lines and dashes, no markdown headings or asterisks. Users are worldwide: never assume a country. Current time: `;
+async function ask(q,cb,opts={}){if(!sample)throw{code:'unavailable'};return sample(`${SYS}${new Date().toString()}\n\nBOARD:\n${boardText()}\n\nToday's check-ins: ${S.checkins.filter(c=>c.at>=sod(now())).map(c=>c.text).join('; ')||'none'}\n\nREQUEST: ${q}`,{onText:cb,modelTier:opts.tier||'default',cache:false})}
+const PROMPTS={plan:'Plan my next 3 hours in time blocks, naming exact tasks and the first physical action for each.',stuck:'I am procrastinating right now. Pick the one task I should do, give me a 2-minute starter action, and one sentence on why it matters.',report:'Write a progress report: what got done, time on HPA vs LPA, what is slipping, and a score out of 10 for this week.',suggest:'Suggest up to 3 new tasks or steps that would raise the value of my current projects, each with value, viability and outcome scores 1-5.'};
+async function minderSay(q,label){const chat=$('chat');chat.insertAdjacentHTML('beforeend',`<div class="msg me">${esc(label||q)}</div>`);const m=document.createElement('div');m.className='msg';m.textContent='Thinking…';chat.appendChild(m);m.scrollIntoView({block:'nearest'});
+try{const r=await ask(q,({text})=>{m.textContent=text});m.textContent=r.text}catch(e){m.textContent=e&&e.code==='rate_limited'?'Minder needs a breather. Try again in a minute.':offline(q)}}
+function offline(){const open=S.tasks.filter(t=>!t.done).sort((a,b)=>quad(a)-quad(b)||score(b)-score(a));const t=open[0];
+return t?`Minder can't reach Claude from here, so here's the rule-based call:\n- Do next: ${t.title} (${Q[quad(t)-1][1]}, score ${score(t)})\n- First step: ${(t.steps.find(s=>!s.d)||{t:'open it and write one line'}).t}\n- Then: ${open.slice(1,3).map(x=>x.title).join(', ')||'nothing else pressing'}`:'Board is clear. Add your next task.'}
+async function genOutputs(t){if(!sample)return;try{const r=await ask(`The task "${t.title}" is now finished. Write three sections with these exact headings on their own lines: PROOF OF CONCEPT (what was proven, evidence from the steps and time logged), PITCH DECK OUTLINE (6-8 numbered slides, each with title and one-line content, aimed at a global audience), NEXT STEP REQUIREMENTS (dashed list of concrete requirements: people, money, tools, data, deadline). Use only facts from the board; mark assumptions as assumptions.`,null,{tier:'complex'});
+if(r.text){t.outputs=r.text;save();renderDone()}}catch(e){}}
+
+/* hourly check-in */
+function checkTick(){if(document.visibilityState==='visible'&&now()-(S.lastCheck||0)>H)$('checkin').classList.add('show');if(S.running){const c=$('clock');if(c)c.textContent=clock(now()-S.running.start)}}
+$('checkinSave').onclick=()=>{const v=$('checkinText').value.trim();if(v)S.checkins.push({at:now(),text:v});S.checkins=S.checkins.slice(-300);S.lastCheck=now();$('checkinText').value='';$('checkin').classList.remove('show');save();renderDay()};
+$('checkinSkip').onclick=()=>{S.lastCheck=now();$('checkin').classList.remove('show');save()};
+
+/* events */
+document.addEventListener('click',ev=>{const b=ev.target.closest('button,[data-open]');if(!b)return;const d=b.dataset;
+if(d.open)openTask(d.open);else if(d.start){start(d.start);close('taskSheet')}else if(b.id==='stopBtn')stop();
+else if(d.close)close(d.close);else if(d.q)minderSay(PROMPTS[d.q],b.textContent);
+else if(d.copy){const t=S.tasks.find(x=>x.id===d.copy);navigator.clipboard.writeText(t.outputs).then(()=>{b.textContent='Copied'},()=>{b.textContent='Select the text to copy'})}
+else if(d.gen){const t=S.tasks.find(x=>x.id===d.gen);if(!sample){b.textContent='Minder unavailable here';return}b.textContent='Writing…';genOutputs(t)}
+else if(d.reopen){const t=S.tasks.find(x=>x.id===d.reopen);t.done=false;t.doneAt=0;t.last=now();save();renderAll()}});
+$('addBtn').onclick=()=>openTask(null);
+$('minderBtn').onclick=()=>{$('minderSheet').classList.add('open');if(!$('chat').children.length)$('chat').innerHTML=`<div class="msg">I've read your board. Pick a button or ask me straight.</div>`};
+$('minderForm').addEventListener('submit',ev=>{ev.preventDefault();const v=$('minderIn').value.trim();if(v){$('minderIn').value='';minderSay(v)}});
+document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',ev=>{if(ev.target===s)s.classList.remove('open')}));
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')document.querySelectorAll('.sheet.open').forEach(s=>s.classList.remove('open'))});
+
+renderAll();setInterval(checkTick,1000);setInterval(()=>{renderMatrix();renderNudges();renderDay()},60e3);
+
+/* capabilities */
+(async()=>{try{if(!window.claude)return;const [db,user,smp]=await Promise.all([claude.use('db'),claude.use('user'),claude.use('sample')]);
+sample=smp||null;if(!sample)$('minderNote').textContent='Minder is running in rule-based mode in this view.';
+if(db&&user){const id=await user.id();if(!id)return;dbDoc=db.collection('data/users/'+id).doc('board');
+let r=await dbDoc.get();
+if(r&&typeof r.data==='function')r=r.data();else if(r&&r.exists===false)r=null;else if(r&&r.data!==undefined&&!r.tasks)r=r.data;
+r=r?clean(r):null;
+if(r&&(r.updated||0)>=(S.updated||0)){S=r;renderAll()}else if(S.updated)save()}}catch(e){}})();
+
+/* test hook for the date helpers (no effect on the page) */
+window.__ttd={parseDeadline,toLocalInput,clean};
+}
+</script>
+</body>
+</html>
