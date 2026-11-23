@@ -1,0 +1,31 @@
+name: Build Android APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.7' }
+      - name: Copy the web app into the APK
+        run: mkdir -p android/app/src/main/assets && cp index.html android/app/src/main/assets/index.html
+      - name: Build
+        working-directory: android
+        env: { VERSION_CODE: '${{ github.run_number }}' }
+        run: gradle assembleDebug --no-daemon
+      - name: Rename
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk ThingsToDo.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: ThingsToDo-apk, path: ThingsToDo.apk }
+      - name: Publish as the "latest" release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest ThingsToDo.apk --title "Things To Do (build ${{ github.run_number }})" --notes "Android APK built from main. Download ThingsToDo.apk below and open it on your phone to install."

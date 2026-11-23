@@ -1,0 +1,14 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'org.thingstodo.app'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'org.thingstodo.app'
+        minSdk 24
+        targetSdk 34
+        versionCode (System.getenv('VERSION_CODE') ?: '1') as int
+        versionName '1.0.' + (System.getenv('VERSION_CODE') ?: '1')
+    }
+    buildTypes { release { minifyEnabled false } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
